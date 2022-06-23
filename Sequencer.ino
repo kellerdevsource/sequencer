@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 #define trigOutPin           B00001000 //A3 (17)
 #define trigInPin            B00001000  //A4 (18)
 #define gateOutSeq1          B00000001 //D8
@@ -8,13 +9,30 @@
 bool triggered;
 uint16_t triggerStepMax = 250; // The Tempo ~0-1024
 uint16_t triggerStep;
+=======
+
+uint32_t tempoTime;
+uint32_t triggerTime;
+uint32_t triggerTimeTempo1;
+uint32_t triggerTimeTempo2;
+bool triggered;
+
+uint32_t timerAdd;
+
+>>>>>>> Stashed changes
 uint16_t controlStepMax = 3;
 uint16_t controlStep;
 
 volatile bool ctrl;
 volatile bool ctrlFast;
+<<<<<<< Updated upstream
+=======
+uint16_t steppStepMax = 1500; // The Tempo ~0-1024
+uint16_t steppStep;
+>>>>>>> Stashed changes
 
 
+<<<<<<< Updated upstream
 uint8_t mainTempoStep;
                         //C,C#,D,D#,E,F,F#,G,G#,A,A#,B;
                         //0, 1,2, 3,4,5, 6,7, 8,9,10,11;
@@ -29,11 +47,47 @@ bool sequence1Gate;
 uint16_t sequence1GateTime;
 uint16_t sequence1GateTimeMax =16; // Read from pot 0-255 : how long the gate is open withing a step
 uint8_t sequence1TempoStepMax = 8;  // Read from pot 64-1: sequence 1 tempo, relative to the main tempo
+=======
+uint32_t tempo1Scaler ;
+bool sequence1StepCall;
+uint16_t sequence1GateTime;
+uint16_t sequence1GateTimeMax =255; // Read from pot 0-255 : how long the gate is open withing a step
+uint8_t tempo1Step;
+volatile bool sequencer1Trigger;
+volatile bool sequencer1Triggered;
+uint8_t tempo1TimeMultiplier = 7;  // Read from pot 15-0: sequence 1 tempo, relative to the main tempo
+volatile bool tempo1StepOut;
+>>>>>>> Stashed changes
 uint8_t sequence1Step;
 uint8_t sequence1LastStep = 3; // Read from pot 0-15 : how much of the sequence is played
 uint8_t sequence1FirstStep = 0;// Read from pot 0-15 : how much of the sequence is played
 uint8_t sequence1CV;
+<<<<<<< Updated upstream
 uint8_t sequence1Note;
+=======
+bool sequence1SkipOffSteps = false;
+bool sequence1Gate;
+bool sequence1GateState;
+
+bool sequence2StepCall;
+uint16_t sequence2GateTime;
+uint16_t sequence2GateTimeMax =128; // Read from pot 0-255 : how long the gate is open withing a step
+uint8_t tempo2Step;
+volatile bool sequencer2Trigger;
+volatile bool sequencer2Triggered;
+uint8_t tempo2TimeMultiplier = 3;  // Read from pot 15-0: sequence 1 tempo, relative to the main tempo
+volatile bool tempo2StepOut;
+uint8_t sequence2Step;
+uint8_t sequence2LastStep = 15; // Read from pot 0-15 : how much of the sequence is played
+uint8_t sequence2FirstStep = 0;// Read from pot 0-15 : how much of the sequence is played
+uint8_t sequence2CV;
+bool sequence2SkipOffSteps = false;
+bool sequence2Gate;
+bool sequence2GateState;
+
+uint8_t mainTempoStep;
+
+>>>>>>> Stashed changes
 
 
 
@@ -67,6 +121,7 @@ void setup() {
   pinMode(8, OUTPUT);
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
+<<<<<<< Updated upstream
   pinMode(14, INPUT);
   pinMode(15, INPUT);
   pinMode(17, OUTPUT);
@@ -74,6 +129,13 @@ void setup() {
 
   
   updateRegistersControls();
+=======
+  pinMode(6, INPUT);
+  pinMode(7, INPUT);
+  pinMode(12, INPUT);
+  pinMode(20, INPUT);
+  pinMode(13, OUTPUT);
+>>>>>>> Stashed changes
   updateRegistersSequence1(0);
   sequence1Step = sequence1LastStep;
   
@@ -81,6 +143,7 @@ void setup() {
 }
 
 ISR(TIMER2_COMPA_vect) {
+<<<<<<< Updated upstream
   if (triggerStep < triggerStepMax) {
     if (triggerStep>triggerStepMax/2) {
       PORTC &= ~trigOutPin;
@@ -89,21 +152,70 @@ ISR(TIMER2_COMPA_vect) {
   } else {
     PORTC |= trigOutPin;
     triggerStep = 0;
+=======
+  timerAdd++;
+  if (steppStep < steppStepMax) {
+    if (steppStep>steppStepMax/2) {
+      digitalWrite(13,0);
+    }
+    steppStep++;
+  } else {
+    digitalWrite(13,1);
+    steppStep = 0;
+>>>>>>> Stashed changes
   }
+  if (digitalRead(12)) {
+    if (!triggered) {
+      if (triggerTime) {
+        tempoTime = timerAdd - triggerTime;
+        tempo1Scaler = tempoTime*(tempo1TimeMultiplier+1);
+        tempo1Scaler/=8;
+      }
+     if (tempo1TimeMultiplier<8) {
+        triggerTimeTempo1 = triggerTime;
+      }
+      triggerTime = timerAdd;
+      triggered = true;
+    }
+  } else {
+    if ((timerAdd - triggerTime) > 3000 && tempoTime) {
+      tempoTime = 0;
+      triggerTime = 0;
+      triggerTimeTempo1 = 0;
+    }
+    triggered = false;
+  }
+  if ((timerAdd > triggerTimeTempo1 + tempo1Scaler) && tempoTime){
+    if (tempo1TimeMultiplier>7) {
+      triggerTimeTempo1 = triggerTime;
+    } else {
+      triggerTimeTempo1 = timerAdd;
+    }
+    sequence1StepCall = true;
+  }
+
   if (controlStep < controlStepMax) {
     controlStep++;
   } else {
     ctrl = true;
     controlStep = 0;
   }
-  ctrlFast = true;
 }
 
 void loop() {
+<<<<<<< Updated upstream
+=======
+  //Serial.println("loop");
+  if (sequence1StepCall){
+    sequence1StepCall = false;
+    sequence1Stepp();
+  }
+>>>>>>> Stashed changes
   if (ctrl) {
     control();
     ctrl = false;
   }
+<<<<<<< Updated upstream
   if (ctrlFast) {
     controlFast();
     ctrlFast = false;
@@ -126,6 +238,14 @@ void control() {
   sequence1GateTimer = sequence1GateTime < map(sequence1GateTimeMax, 0, 255, 0, (triggerStepMax*(1 + sequence1TempoStepMax))/controlStepMax);
   //Serial.println(sequence1GateState);
   if (sequence1GateTimer) {
+=======
+}
+void control() {
+  //Serial.println(sequence1Step);
+  sequence1GateState = sequence1GateTime < map(sequence1GateTimeMax, 0, 255, 0, (steppStepMax*(1 + tempo1TimeMultiplier))/controlStepMax);
+  sequence2GateState = sequence2GateTime < map(sequence2GateTimeMax, 0, 255, 0, (steppStepMax*(1 + tempo1TimeMultiplier))/controlStepMax);
+  if (sequence1GateState) {
+>>>>>>> Stashed changes
     sequence1GateTime++;
   } else {
     PORTB &= ~gateOutSeq1;
@@ -158,12 +278,23 @@ void triggerStepp() {
   if (!(mainTempoStep%sequence1TempoStepMax)) {
     sequence1Stepp();
   }
+<<<<<<< Updated upstream
   if (mainTempoStep < 31) {
     mainTempoStep++;
   } else {
     mainTempoStep = 0;
   }
 }
+=======
+  digitalWrite(5, 1);
+  digitalWrite(5, 0);
+  digitalWrite(3, 0);
+  digitalWrite(2, 0);
+  sequence2Gate = digitalRead(7);
+}
+
+
+>>>>>>> Stashed changes
 void sequence1NextStepForward() {
   if (sequence1Step < sequence1LastStep) {
     sequence1Step += 1;
@@ -210,7 +341,7 @@ void sequence1Stepp() {
         break;
       }
     }
-  } else {
+  } else {      
       if (sequence1Forward) {
         sequence1NextStepForward();
       } else {
