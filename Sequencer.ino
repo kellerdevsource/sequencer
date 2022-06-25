@@ -1,5 +1,5 @@
 #define trigOutPin           B00001000 //A3 (17)
-#define trigInPin            B00001000  //A4 (18)
+#define trigInPin            B00010000  //A4 (18)
 #define gateOutSeq1          B00000001 //D8
 #define clkRegSequences      B00001000 //D3
 #define dataRegSequences     B00000100 //D2
@@ -14,6 +14,7 @@ uint16_t controlStep;
 volatile bool ctrl;
 volatile bool ctrlFast;
 
+bool randomStep;
 
 uint8_t mainTempoStep;
 //C,C#,D,D#,E,F,F#,G,G#,A,A#,B;
@@ -22,9 +23,11 @@ uint8_t minorScale[12] = {0, 0, 2, 3, 3, 5, 5, 7, 8, 8, 10, 10};
 uint8_t majorScale[12] = {0, 0, 2, 2, 4, 5, 5, 7, 7, 9, 9, 11};
 uint8_t sequenceScale = 0;
 
-bool sequence1Forward = true;
+uint8_t sequence1Type = 1;
+uint8_t sequence1Dir = 2;
+bool pingPongSeq1Dir;
+bool pingPongSeq1Flip;
 bool sequence1GateTimer;
-bool sequence1SkipOffSteps = false;
 bool sequence1Gate;
 uint16_t sequence1GateTime;
 uint16_t sequence1GateTimeMax = 127; // Read from pot 0-255 : how long the gate is open withing a step
@@ -112,6 +115,7 @@ void loop() {
 
 }
 void controlFast() {
+//PINC & trigInPin
   if (PINC & trigInPin) {
     if (!triggered) {
       triggered = true;
@@ -167,24 +171,9 @@ void triggerStepp() {
     mainTempoStep = 0;
   }
 }
-void sequence1NextStepForward() {
-  if (sequence1Step < sequence1LastStep) {
-    sequence1Step += 1;
-  } else {
-    sequence1Step = sequence1FirstStep;
-  }
-  updateRegistersSequence1(1 << sequence1Step);
-}
-void sequence1NextStepBackword() {
-  if (sequence1Step > sequence1FirstStep) {
-    sequence1Step -= 1;
-  } else {
-    sequence1Step = sequence1LastStep;
-  }
-  updateRegistersSequence1(1 << sequence1Step);
-}
 void sequence1UpdateNote() {
   PORTB |= gateOutSeq1;
+  //uint16_t seq1Read = analogRead(20);
   sequence1CV = map(analogRead(20), 0, 1007, 0, 60);//(analogRead(20) >> 4);
   switch (sequenceScale) {
     case 0:
@@ -199,30 +188,104 @@ void sequence1UpdateNote() {
   sequence1CV =  sequence1CV << 2;
   analogWrite(9, sequence1CV);
 }
-void sequence1Stepp() {
-  sequence1GateTime = 0;
-  if (sequence1SkipOffSteps) {
-    for (uint8_t i = 0; i <= (sequence1LastStep - sequence1FirstStep); i++) {
-      if (sequence1Forward) {
-        sequence1NextStepForward();
-      } else {
-        sequence1NextStepBackword();
-      }
-      if (sequence1Gate) {
-        sequence1UpdateNote();
+void sequence1NextStepForward() {
+  if (sequence1Step < (sequence1LastStep - 1)) {
+    sequence1Step += 1;
+  } else if (sequence1Step != sequence1LastStep){
+    if (sequence1Dir == 2) {
+      pingPongSeq1Dir = !pingPongSeq1Dir;
+    }
+    sequence1Step += 1;
+  } else {
+    sequence1Step = sequence1FirstStep;
+  }
+}
+void sequence1NextStepBackword() {
+  if (sequence1Step > (sequence1FirstStep + 1)) {
+    sequence1Step -= 1;
+  } else if (sequence1Step != sequence1FirstStep){
+    if (sequence1Dir == 2) {
+      pingPongSeq1Dir = !pingPongSeq1Dir;
+    }
+    sequence1Step -= 1;
+  } else {
+    sequence1Step = sequence1LastStep;
+  }
+}
+void sequence1NextStep() {
+      switch (sequence1Type) {
+        case 0:
+          switch (sequence1Dir) {
+            case 0:
+            sequence1NextStepForward();
+            break;
+            case 1:
+            sequence1NextStepBackword();
+            break;
+            case 2:
+            if (pingPongSeq1Dir) {
+              sequence1NextStepForward();
+            } else {
+              sequence1NextStepBackword();
+            }
+            break;
+          }
+          updateRegistersSequence1(1 << sequence1Step);
+        break;
+        case 1:
+          switch (sequence1Dir) {
+            case 0:
+            for (uint8_t i = 0; i <= (sequence1LastStep - sequence1FirstStep); i++) {
+              sequence1NextStepForward();
+              updateRegistersSequence1(1 << sequence1Step);
+              if (sequence1Gate) {
+                break;
+              }
+            }
+            break;
+            case 1:
+            for (uint8_t i = 0; i <= (sequence1LastStep - sequence1FirstStep); i++) {
+              sequence1NextStepBackword();
+              updateRegistersSequence1(1 << sequence1Step);
+              if (sequence1Gate) {
+                break;
+              }
+            }
+            break;
+            case 2:
+            if (pingPongSeq1Dir) {
+            for (uint8_t i = 0; i <= (sequence1LastStep - sequence1FirstStep); i++) {
+              sequence1NextStepForward();
+              updateRegistersSequence1(1 << sequence1Step);
+              if (sequence1Gate) {
+                break;
+              }
+            }
+            } else {
+            for (uint8_t i = 0; i <= (sequence1LastStep - sequence1FirstStep); i++) {
+              sequence1NextStepBackword();
+              updateRegistersSequence1(1 << sequence1Step);
+              if (sequence1Gate) {
+                break;
+              }
+            }
+            }
+            break;
+          }
+        break;
+        case 2:
+          sequence1Step = rand()%(sequence1LastStep-sequence1FirstStep+1) + sequence1FirstStep;
+          updateRegistersSequence1(1 << sequence1Step);
         break;
       }
-    }
-  } else {
-    if (sequence1Forward) {
-      sequence1NextStepForward();
-    } else {
-      sequence1NextStepBackword();
-    }
+}
+void sequence1Stepp() {
+    sequence1GateTime = 0;
+    sequence1NextStep();
+    //Serial.println(sequence1Step);
     if (sequence1Gate) {
       sequence1UpdateNote();
     } else {
       PORTB &= ~gateOutSeq1;
     }
-  }
 }
