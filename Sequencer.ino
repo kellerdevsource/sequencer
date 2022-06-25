@@ -69,12 +69,21 @@ void setup() {
 
 ISR(TIMER2_COMPA_vect) {
   if (triggerStep < triggerStepMax) {
+<<<<<<< Updated upstream
     if (triggerStep>triggerStepMax/2) {
       digitalWrite(11,0);
     }
     triggerStep++;
   } else {
     digitalWrite(11,1);
+=======
+    if (triggerStep == triggerStepMax / 2) {
+      digitalWrite(A3,0);
+    }
+    triggerStep++;
+  } else {
+    digitalWrite(A3,1);
+>>>>>>> Stashed changes
     triggerStep = 0;
   }
   if (controlStep < controlStepMax) {
@@ -87,6 +96,14 @@ ISR(TIMER2_COMPA_vect) {
 }
 
 void loop() {
+<<<<<<< Updated upstream
+=======
+  Serial.println("loop");
+  if (ctrlFast) {
+    ctrlFast = false;
+    controlFast();
+  }
+>>>>>>> Stashed changes
   if (ctrl) {
     control();
     ctrl = false;
@@ -97,7 +114,12 @@ void loop() {
   }
 }
 void controlFast() {
+<<<<<<< Updated upstream
   if (digitalRead(12)) {
+=======
+  Serial.println("fast");
+  if (digitalRead(A4)) {
+>>>>>>> Stashed changes
     if (!triggered) {
       triggered = true;
       triggerStepp();
@@ -109,13 +131,25 @@ void controlFast() {
   }
 }
 void control() {
+  Serial.println("slow");
   updateRegistersControls();
+<<<<<<< Updated upstream
   sequence1GateTimer = sequence1GateTime < map(sequence1GateTimeMax, 0, 255, 0, (triggerStepMax*(1 + sequence1TempoStepMax))/controlStepMax);
   //Serial.println(sequence1GateState);
   if (sequence1GateTimer) {
     sequence1GateTime++;
   } else {
     digitalWrite(8, 0);
+=======
+  sequence1GateTimer = sequence1GateTime < map(sequence1GateTimeMax, 0, 255, 0, (triggerStepMax * sequence1TempoStepMax) / (controlStepMax+1));
+  if (sequence1GateTimer) {
+    sequence1GateTime++;
+  } else {
+    if (sequence1Gate) {
+      sequence1Gate = 0;
+      digitalWrite(8,0);
+    }
+>>>>>>> Stashed changes
   }
 }
 void updateRegistersControls() {
@@ -123,6 +157,7 @@ void updateRegistersControls() {
   //sequence1TempoStepMax = (1<<(map(analogRead(15), 0, 1023, 6, 0)));
 }
 void updateRegistersSequence1(uint8_t value) {
+<<<<<<< Updated upstream
   for (uint8_t i = 0; i < sequence1LastStep+1; i++) {
     digitalWrite(3, 0);
     digitalWrite(2, (value >> (sequence1LastStep - i)) & 1);
@@ -132,6 +167,21 @@ void updateRegistersSequence1(uint8_t value) {
   digitalWrite(4, 0);
   digitalWrite(3, 0);
   digitalWrite(2, 0);
+=======
+  for (uint8_t i = 0; i < sequence1LastStep + 1; i++) {
+    digitalWrite(3,0);
+    if ((value >> (sequence1LastStep - i)) & 1) {
+      digitalWrite(2,1);
+    } else {
+      digitalWrite(2,0);
+    }
+    digitalWrite(3,1);
+  }
+  digitalWrite(4,1);
+  digitalWrite(4,0);
+  digitalWrite(3,0);
+  digitalWrite(2,0);
+>>>>>>> Stashed changes
   sequence1Gate = digitalRead(6);
 }
 
@@ -167,6 +217,7 @@ void sequence1NextStepBackword() {
   }
   updateRegistersSequence1(1 << sequence1Step);
 }
+<<<<<<< Updated upstream
 void sequence1UpdateNote(){
   sequence1CV = analogRead(20) >> 5;
   digitalWrite(8, 1);
@@ -174,6 +225,25 @@ void sequence1UpdateNote(){
 }
 void sequence1Stepp() {
   //Serial.println(mainTempoStep);
+=======
+void sequence1UpdateNote() {
+  sequence1CV = map(analogRead(20), 0, 1007, 0, 60);//(analogRead(20) >> 4);
+  switch (sequenceScale) {
+    case 0:
+      sequence1Note = minorScale[sequence1CV % 12];
+      sequence1CV = sequence1Note + ((sequence1CV / 12) * 12);
+      break;
+    case 2:
+      sequence1Note = majorScale[sequence1CV % 12];
+      sequence1CV = sequence1Note + ((sequence1CV / 12) * 12);
+      break;
+  }
+  sequence1CV =  sequence1CV << 2;
+  digitalWrite(8,1);
+  analogWrite(9, sequence1CV);
+}
+void sequence1Stepp() {
+>>>>>>> Stashed changes
   if (sequence1SkipOffSteps) {
     for (uint8_t i = 0; i <= (sequence1LastStep-sequence1FirstStep); i++) {
       if (sequence1Forward) {
@@ -187,6 +257,7 @@ void sequence1Stepp() {
       }
     }
   } else {
+<<<<<<< Updated upstream
       if (sequence1Forward) {
         sequence1NextStepForward();
       } else {
@@ -195,6 +266,16 @@ void sequence1Stepp() {
       if (sequence1Gate) {
         sequence1UpdateNote();
      }
+=======
+    if (sequence1Forward) {
+      sequence1NextStepForward();
+    } else {
+      sequence1NextStepBackword();
+    }
+    if (sequence1Gate) {
+      sequence1UpdateNote();
+    }
+>>>>>>> Stashed changes
   }
   sequence1GateTime = 0;
 }
