@@ -1,16 +1,18 @@
 #include <SPI.h>
 #define trigOutPin           B00001000 //A3 (17)
-#define trigInPin            B00010000  //A4 (18)
+#define trigInPin            B00010000 //A4 (18)
+#define ctrlRegsCLK           B00000010 //A1 (15)
+#define ctrlRegsData          B00000100 //A2 (16)
 #define gateOutSeq1          B00000100 //D2
-//#define clkRegSequences      B00001000 //D3
-//#define dataRegSequences     B00000100 //D2
-#define storageRegSequence1  B00000010 //D9
+#define ssSequence1          B00000010 //D9
 #define gateInSeq1           B00010000 //D4
+
 bool triggered;
 uint16_t triggerStepMax = 250; // The Tempo ~0-1024
 uint16_t triggerStep;
 uint16_t controlStepMax = 3;
 uint16_t controlStep;
+uint8_t ctrlRegsOp;
 
 volatile bool ctrl;
 volatile bool ctrlFast;
@@ -22,8 +24,8 @@ uint8_t minorScale[12] = {0, 0, 2, 3, 3, 5, 5, 7, 8, 8, 10, 10};
 uint8_t majorScale[12] = {0, 0, 2, 2, 4, 5, 5, 7, 7, 9, 9, 11};
 uint8_t sequenceScale = 0;
 
-uint8_t sequence1Type = 1;
-uint8_t sequence1Dir = 2;
+uint8_t sequence1Type = 0; //0-normal;1-skipOffSteps;2-random
+uint8_t sequence1Dir = 0; //0-forward;1-backword;2-pingpong
 bool pingPongSeq1Dir;
 bool pingPongSeq1Flip;
 bool sequence1GateTimer;
@@ -76,20 +78,19 @@ void setup() {
   pinMode(8, INPUT);
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
+  pinMode(15, OUTPUT);
+  pinMode(16, OUTPUT);
   pinMode(17, OUTPUT);
   pinMode(18, INPUT);
 
   digitalWrite(10, 0);
 
-  //SPI.setClockDivider(SPI_CLOCK_DIV2);
   SPI.begin();
   
   Serial.begin(9600);
-  
-  
+
   updateRegistersControls();
-  updateRegistersSequence1(0);
-  sequence1Step = sequence1LastStep;
+  sequence1Step = 15;
 }
 
 ISR(TIMER2_COMPA_vect) {
@@ -149,14 +150,35 @@ void control() {
  
 }
 void updateRegistersControls() {
-  triggerStepMax = map(analogRead(14), 0, 1023, 250, 80); //60?-187.5 BPM
-  sequence1TempoStepMax = (1 << (map(analogRead(14), 0, 1023, 5, 0)));
+  triggerStepMax = 200;//map(analogRead(14), 0, 1023, 250, 80); //60?-187.5 BPM
+  sequence1TempoStepMax = 2;//(1 << (map(analogRead(14), 0, 1023, 5, 0)));
+  switch (ctrlRegsOp) {
+    case 0:
+    PORTC|=ctrlRegsData;
+    PORTC|=ctrlRegsCLK;
+    PORTC&=~ctrlRegsCLK;
+    PORTC&=~ctrlRegsData;
+    PORTC|=ctrlRegsCLK;
+    PORTC&=~ctrlRegsCLK;
+    //Serial.println(analogRead(14));
+    break;
+    case 3:
+    PORTC|=ctrlRegsCLK;
+    PORTC&=~ctrlRegsCLK;
+    Serial.println(analogRead(14));
+    break;
+  }
+  if (ctrlRegsOp<14) {
+    ctrlRegsOp++;
+  } else {
+    ctrlRegsOp = 0;
+  }
 }
-void updateRegistersSequence1(uint8_t value) {
-  SPI.transfer16(value); 
-  PORTB |= storageRegSequence1;
-  PORTB &= ~storageRegSequence1;
-  //sequence1Gate =  digitalRead(7);
+void updateRegistersSequence1() {
+  uint16_t value = 15 - sequence1Step;
+  SPI.transfer16(1<<value); 
+  PORTB |= ssSequence1;
+  PORTB &= ~ssSequence1;
   delayMicroseconds(5);
   sequence1Gate =  PIND&gateInSeq1;
 }
@@ -173,15 +195,10 @@ void triggerStepp() {
 }
 void sequence1UpdateNote() {
   PORTD |= gateOutSeq1;
-  //uint16_t seq1Read = analogRead(20);
   sequence1CV = map(analogRead(20), 0, 1007, 0, 60);//(analogRead(20) >> 4);
 
   
-  byte sequence1CV_temp = sequence1CV;
-  sequence1CV_temp = majorScale[sequence1CV % 12];
-  sequence1CV_temp +=(sequence1CV / 12) * 12;
-  sequence1CV_temp = sequence1CV_temp<<2;
-  OCR0A = sequence1CV_temp;
+
   switch (sequenceScale) {
     case 0:
       sequence1Note = minorScale[sequence1CV % 12];
@@ -194,7 +211,6 @@ void sequence1UpdateNote() {
   }
   sequence1CV =  (sequence1CV) << 2;
   OCR0B = sequence1CV;
-  //analogWrite(5, sequence1CV);
 }
 void sequence1NextStepForward() {
   if (sequence1Step < sequence1LastStep) {
@@ -238,14 +254,14 @@ void sequence1NextStep() {
             }
             break;
           }
-          updateRegistersSequence1(1 << sequence1Step);
+          updateRegistersSequence1();
         break;
         case 1:
           switch (sequence1Dir) {
             case 0:
             for (uint8_t i = 0; i < 16; i++) {
               sequence1NextStepForward();
-              updateRegistersSequence1(1 << sequence1Step);
+              updateRegistersSequence1();
               if (sequence1Gate) {
                 break;
               }
@@ -254,7 +270,7 @@ void sequence1NextStep() {
             case 1:
             for (uint8_t i = 0; i < 16; i++) {
               sequence1NextStepBackword();
-              updateRegistersSequence1(1 << sequence1Step);
+              updateRegistersSequence1();
               if (sequence1Gate) {
                 break;
               }
@@ -267,7 +283,7 @@ void sequence1NextStep() {
               } else  {
                 sequence1NextStepBackword();
               }
-              updateRegistersSequence1(1 << sequence1Step);
+              updateRegistersSequence1();
               if (sequence1Gate && sequence1Step != sequence1LastOnStep) {
                 sequence1LastOnStep = sequence1Step;
                 break;
@@ -278,14 +294,13 @@ void sequence1NextStep() {
         break;
         case 2:
           sequence1Step = rand()%(sequence1LastStep-sequence1FirstStep+1) + sequence1FirstStep;
-          updateRegistersSequence1(1 << sequence1Step);
+          updateRegistersSequence1();
         break;
       }
 }
 void sequence1Stepp() {
     sequence1GateTime = 0;
     sequence1NextStep();
-    //Serial.println(sequence1Step);
     if (sequence1Gate) {
       sequence1UpdateNote();
     } else {
