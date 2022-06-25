@@ -20,6 +20,9 @@ void updateRegistersControls() {
     PORTC&=~ctrlRegsCLK;
     if (digitalRead(14)){
       if (!funcButton) {
+        mainTempoStep = 1;
+        sequence1Step = sequence1FirstStep;
+        sequence2Step = sequence2FirstStep;
         funcButton = true;
       }
     } else {
@@ -32,18 +35,10 @@ void updateRegistersControls() {
     if (digitalRead(14)) {
       if (!funcSeq1) {
         funcSeq1 = true;
-        if (!funcButton) {
-          if (sequence1Type<2){
-            sequence1Type ++;
-          } else {
-            sequence1Type = 0;
-          }
+        if (sequence1Type<2){
+          sequence1Type ++;
         } else {
-          if (sequence1Dir<2){
-            sequence1Dir ++;
-          } else {
-            sequence1Dir = 0;
-          }
+          sequence1Type = 0;
         }
       }
     } else {
@@ -91,18 +86,10 @@ void updateRegistersControls() {
     if (digitalRead(14)) {
       if (!funcSeq2) {
         funcSeq2 = true;
-        if (!funcButton) {
-          if (sequence2Type<2){
-            sequence2Type ++;
-          } else {
-            sequence2Type = 0;
-          }
+        if (sequence2Type<2){
+          sequence2Type ++;
         } else {
-          if (sequence2Dir<2){
-            sequence2Dir ++;
-          } else {
-            sequence2Dir = 0;
-          }
+          sequence2Type = 0;
         }
       }
     } else {

@@ -20,61 +20,24 @@ void sequence1Stepp() {
 void sequence1NextStep() {
       switch (sequence1Type) {
         case 0:
-          switch (sequence1Dir) {
-            case 0:
-            sequence1NextStepForward();
-            break;
-            case 1:
-            sequence1NextStepBackword();
-            break;
-            case 2:
-            if (pingPongSeq1Dir) {
-              sequence1NextStepForward();
-            } else {
-              sequence1NextStepBackword();
-            }
-            break;
-          }
+          sequence1NextStepForward();
           updateRegistersSequence1();
         break;
         case 1:
-          switch (sequence1Dir) {
-            case 0:
-            for (uint8_t i = 0; i < 16; i++) {
-              sequence1NextStepForward();
-              updateRegistersSequence1();
-              if (sequence1Gate) {
-                break;
-              }
+          for (uint8_t i = 0; i < 16; i++) {
+            sequence1NextStepForward();
+            updateRegistersSequence1();
+            if (sequence1Gate) {
+              break;
             }
-            break;
-            case 1:
-            for (uint8_t i = 0; i < 16; i++) {
-              sequence1NextStepBackword();
-              updateRegistersSequence1();
-              if (sequence1Gate) {
-                break;
-              }
-            }
-            break;
-            case 2:
-            for (uint8_t i = 0; i < 32; i++) {
-              if (pingPongSeq1Dir) {
-                sequence1NextStepForward();
-              } else  {
-                sequence1NextStepBackword();
-              }
-              updateRegistersSequence1();
-              if (sequence1Gate && sequence1Step != sequence1LastOnStep) {
-                sequence1LastOnStep = sequence1Step;
-                break;
-              }
-            }
-            break;
           }
         break;
         case 2:
-          sequence1Step = rand()%(sequence1LastStep-sequence1FirstStep+1) + sequence1FirstStep;
+          if (pingPongSeq1Dir) {
+            sequence1NextStepForward();
+          } else {
+            sequence1NextStepBackword();
+          }
           updateRegistersSequence1();
         break;
       }
@@ -83,7 +46,7 @@ void sequence1NextStepForward() {
   if (sequence1Step < sequence1LastStep) {
     sequence1Step += 1;
   } else {
-    if (sequence1Dir != 2) {
+    if (sequence1Type != 2) {
       sequence1Step = sequence1FirstStep;
     } else {
       sequence1Step -= 1;
@@ -95,7 +58,7 @@ void sequence1NextStepBackword() {
   if (sequence1Step > sequence1FirstStep) {
     sequence1Step -= 1;
   } else {
-    if (sequence1Dir != 2) {
+    if (sequence1Type != 2) {
       sequence1Step = sequence1LastStep;
     } else {
       sequence1Step += 1;
