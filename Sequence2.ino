@@ -24,6 +24,18 @@ void sequence2NextStep() {
           updateRegistersSequence2();
         break;
         case 1:
+          sequence2NextStepBackword();
+          updateRegistersSequence2();
+        break;
+        case 2:
+          if (pingPongSeq2Dir) {
+            sequence2NextStepForward();
+          } else {
+            sequence2NextStepBackword();
+          }
+          updateRegistersSequence2();
+        break;
+        case 3:
           for (uint8_t i = 0; i < 16; i++) {
             sequence2NextStepForward();
             updateRegistersSequence2();
@@ -32,12 +44,8 @@ void sequence2NextStep() {
             }
           }
         break;
-        case 2:
-          if (pingPongSeq2Dir) {
-            sequence2NextStepForward();
-          } else {
-            sequence2NextStepBackword();
-          }
+        case 4:
+          sequence2Step = rand()%(sequence2LastStep-sequence2FirstStep+1) + sequence2FirstStep;
           updateRegistersSequence2();
         break;
       }

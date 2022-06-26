@@ -13,6 +13,7 @@
 #define gateInSeq2           B10000000 //D7
 
 bool triggered;
+bool repeat;
 uint16_t triggerStepMax = 250; // The Tempo ~0-1024
 uint16_t triggerStep;
 uint16_t controlStepMax = 3;
@@ -30,8 +31,7 @@ uint8_t majorScale[12] = {0, 0, 2, 2, 4, 5, 5, 7, 7, 9, 9, 11};
 uint8_t sequenceScale = 0; //0 - minor; 1 - 12 seitone; 2 - 6 semitone; 3 - major
 
 
-uint8_t sequence1Type = 0; //0-normal;1-skipOffSteps;2-random
-uint8_t sequence1Dir = 0; //0-forward;1-backword;2-pingpong
+uint8_t sequence1Type = 0; //0-forward;1-backwords;2-pingpong;3-skip;4-random
 bool pingPongSeq1Dir;
 bool sequence1GateTimer;
 bool sequence1Gate;
@@ -45,9 +45,10 @@ uint8_t sequence1LastOnStep;
 uint8_t sequence1CV;
 uint8_t sequence1Note;
 bool sequence1Play;
+uint8_t repeats;
+uint8_t repeatsMax;
 
-uint8_t sequence2Type = 0; //0-normal;1-skipOffSteps;2-random
-uint8_t sequence2Dir = 0; //0-forward;1-backword;2-pingpong
+uint8_t sequence2Type = 0; //0-forward;1-backwords;2-pingpong;3-skip;4-random
 bool pingPongSeq2Dir;
 bool sequence2GateTimer;
 bool sequence2Gate;
@@ -69,7 +70,7 @@ void setup() {
   
   TIMSK0 = TIMSK0 & B11111110; // Disable millis()
   
-  TCCR0B = TCCR0B & B11111000 | B00000001; //set Timer0 prescaler to 1
+  TCCR0B = TCCR0B & B11110000 | B00000001; //set Timer0 prescaler to 1
   TCCR0A = TCCR0A & B11111100 | B00000001; //set pwm mode on Timer0 to phase correct
   TCCR0A |= B10100000; // enable pwm
 

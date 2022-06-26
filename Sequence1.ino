@@ -1,4 +1,3 @@
-
 void updateRegistersSequence1() {
   uint16_t value = 15 - sequence1Step;
   SPI.transfer16(1<<value); 
@@ -10,7 +9,15 @@ void updateRegistersSequence1() {
 
 void sequence1Stepp() {
     sequence1GateTime = 0;
-    sequence1NextStep();
+    if (repeat){
+      if (repeats<repeatsMax){
+        repeats++;
+      }  else {
+        repeats = 0;
+      }
+    } else {
+      sequence1NextStep();
+    }
     if (sequence1Gate) {
       sequence1UpdateNote();
     } else {
@@ -24,6 +31,18 @@ void sequence1NextStep() {
           updateRegistersSequence1();
         break;
         case 1:
+          sequence1NextStepBackword();
+          updateRegistersSequence1();
+        break;
+        case 2:
+          if (pingPongSeq1Dir) {
+            sequence1NextStepForward();
+          } else {
+            sequence1NextStepBackword();
+          }
+          updateRegistersSequence1();
+        break;
+        case 3:
           for (uint8_t i = 0; i < 16; i++) {
             sequence1NextStepForward();
             updateRegistersSequence1();
@@ -32,12 +51,8 @@ void sequence1NextStep() {
             }
           }
         break;
-        case 2:
-          if (pingPongSeq1Dir) {
-            sequence1NextStepForward();
-          } else {
-            sequence1NextStepBackword();
-          }
+        case 4:
+          sequence1Step = rand()%(sequence1LastStep-sequence1FirstStep+1) + sequence1FirstStep;
           updateRegistersSequence1();
         break;
       }

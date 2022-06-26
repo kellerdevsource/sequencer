@@ -35,11 +35,7 @@ void updateRegistersControls() {
     if (digitalRead(14)) {
       if (!funcSeq1) {
         funcSeq1 = true;
-        if (sequence1Type<2){
-          sequence1Type ++;
-        } else {
-          sequence1Type = 0;
-        }
+        sequence1Stepp();
       }
     } else {
       funcSeq1 = false;
@@ -58,7 +54,8 @@ void updateRegistersControls() {
     case 5:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence1GateTimeMax = analogRead(14)>>2;
+    sequence1Type = map(analogRead(14), 0, 1023, 0, 5);
+    //sequence1GateTimeMax = analogRead(14)>>2;
     break;
     case 6:
     PORTC|=ctrlRegsCLK;
@@ -86,11 +83,7 @@ void updateRegistersControls() {
     if (digitalRead(14)) {
       if (!funcSeq2) {
         funcSeq2 = true;
-        if (sequence2Type<2){
-          sequence2Type ++;
-        } else {
-          sequence2Type = 0;
-        }
+        sequence2Stepp();
       }
     } else {
       funcSeq2 = false;
@@ -99,7 +92,18 @@ void updateRegistersControls() {
     case 9:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence2Play = digitalRead(14);
+    uint8_t sequence2PlayRead = digitalRead(14);
+    if (!sequence2PlayRead){
+      if (sequence2Play) {
+        if (sequence2FirstStep = sequence2LastStep) {
+         repeat = true;
+        }
+        sequence2Play = false;
+      }
+    } else {
+      repeat = false;
+      sequence2Play = true;
+    }
     break;
     case 10:
     PORTC|=ctrlRegsCLK;
@@ -109,7 +113,8 @@ void updateRegistersControls() {
     case 11:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence2GateTimeMax = analogRead(14)>>2;
+    sequence2Type = map(analogRead(14), 0, 1023, 0, 5);
+    //sequence2GateTimeMax = analogRead(14)>>2;
     break;
     case 12:
     PORTC|=ctrlRegsCLK;
