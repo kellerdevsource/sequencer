@@ -51,13 +51,12 @@ void updateRegistersControls() {
     case 4:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence1GateTimeMax = analogRead(14)>>2;
+    sequence1TempoStepMax = 1 << (map(analogRead(14), 0, 1023, 5, 0));
     break;
     case 5:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
     sequence1Type = map(analogRead(14), 0, 1023, 0, 4);
-    //sequence1GateTimeMax = analogRead(14)>>2;
     break;
     case 6:
     PORTC|=ctrlRegsCLK;
@@ -104,7 +103,7 @@ void updateRegistersControls() {
     } else {
       if (repeat){
         repeat = false;
-        sequence2TempoStepMax = 1;
+        sequence1GateTimeMax = 127;
       }
       sequence2Play = true;
     }
@@ -113,11 +112,6 @@ void updateRegistersControls() {
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
     sequence2TempoStepMax = 1 << (map(analogRead(14), 0, 1023, 5, 0));//Sequence 1 trigger divider
-    /*
-    if (!repeat) {
-      sequence2GateTimeMax = analogRead(14)>>2;
-    }
-    */
     break;
     case 11:
     PORTC|=ctrlRegsCLK;
@@ -139,8 +133,7 @@ void updateRegistersControls() {
     PORTC&=~ctrlRegsCLK;
     potTempReading = analogRead(14);
     if (repeat){
-      sequence2TempoStepMax = 1 << (map(potTempReading, 0, 1023, 5, 0));//Sequence 1 trigger divider
-      sequence2GateTimeMax = 127;
+      sequence1GateTimeMax = potTempReading>>2;
     } else {
       potTempReading = potTempReading>>6;
       if (sequence2LastStep>potTempReading) {
