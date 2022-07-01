@@ -3,8 +3,24 @@ void updateRegistersSequence1() {
   SPI.transfer16(1<<value); 
   PORTB |= ssSequence1;
   PORTB &= ~ssSequence1;
-  delayMicroseconds(5);
-  sequence1Gate =  PIND&gateInSeq1;
+  if (repeat) {
+    PORTB |= ssSequence2;
+    PORTB &= ~ssSequence2;
+    delayMicroseconds(5);
+    sequence1Gate =  PIND&gateInSeq1;
+    if (sequence1Gate) {
+      repeatsMax = (map(analogRead(21), 0, 1023, 0, 7));
+      repeatGate = PIND&gateInSeq2;
+    } else {
+      if (sequence1Type != 1) {
+        repeatsMax = (map(analogRead(21), 0, 1023, 0, 7));
+      }
+      repeatGate = 0;
+    }
+  } else {
+    delayMicroseconds(5);
+    sequence1Gate =  PIND&gateInSeq1;
+  }
 }
 
 void sequence1Stepp() {
@@ -12,16 +28,16 @@ void sequence1Stepp() {
     if (repeat){
       if (repeats<repeatsMax){
         repeats++;
+        if (repeatGate){
+          sequence1Gate = true;
+          PORTD |= gateOutSeq1;
+        }
       }  else {
         repeats = 0;
+        sequence1NextStep();
       }
     } else {
       sequence1NextStep();
-    }
-    if (sequence1Gate) {
-      sequence1UpdateNote();
-    } else {
-      PORTD &= ~gateOutSeq1;
     }
 }
 void sequence1NextStep() {
@@ -31,8 +47,13 @@ void sequence1NextStep() {
           updateRegistersSequence1();
         break;
         case 1:
-          sequence1NextStepBackword();
-          updateRegistersSequence1();
+          for (uint8_t i = 0; i < 16; i++) {
+            sequence1NextStepForward();
+            updateRegistersSequence1();
+            if (sequence1Gate) {
+              break;
+            }
+          }
         break;
         case 2:
           if (pingPongSeq1Dir) {
@@ -43,18 +64,18 @@ void sequence1NextStep() {
           updateRegistersSequence1();
         break;
         case 3:
-          for (uint8_t i = 0; i < 16; i++) {
-            sequence1NextStepForward();
-            updateRegistersSequence1();
-            if (sequence1Gate) {
-              break;
-            }
-          }
+          sequence1NextStepBackword();
+          updateRegistersSequence1();
         break;
         case 4:
           sequence1Step = rand()%(sequence1LastStep-sequence1FirstStep+1) + sequence1FirstStep;
           updateRegistersSequence1();
         break;
+      }
+      if (sequence1Gate) {
+        sequence1UpdateNote();
+      } else {
+        PORTD &= ~gateOutSeq1;
       }
 }
 void sequence1NextStepForward() {

@@ -11,11 +11,6 @@ void updateRegistersSequence2() {
 void sequence2Stepp() {
     sequence2GateTime = 0;
     sequence2NextStep();
-    if (sequence2Gate) {
-      sequence2UpdateNote();
-    } else {
-      PORTD &= ~gateOutSeq2;
-    }
 }
 void sequence2NextStep() {
       switch (sequence2Type) {
@@ -24,8 +19,13 @@ void sequence2NextStep() {
           updateRegistersSequence2();
         break;
         case 1:
-          sequence2NextStepBackword();
-          updateRegistersSequence2();
+          for (uint8_t i = 0; i < 16; i++) {
+            sequence2NextStepForward();
+            updateRegistersSequence2();
+            if (sequence2Gate) {
+              break;
+            }
+          }
         break;
         case 2:
           if (pingPongSeq2Dir) {
@@ -36,18 +36,18 @@ void sequence2NextStep() {
           updateRegistersSequence2();
         break;
         case 3:
-          for (uint8_t i = 0; i < 16; i++) {
-            sequence2NextStepForward();
-            updateRegistersSequence2();
-            if (sequence2Gate) {
-              break;
-            }
-          }
+          sequence2NextStepBackword();
+          updateRegistersSequence2();
         break;
         case 4:
           sequence2Step = rand()%(sequence2LastStep-sequence2FirstStep+1) + sequence2FirstStep;
           updateRegistersSequence2();
         break;
+      }
+      if (sequence2Gate) {
+        sequence2UpdateNote();
+      } else {
+        PORTD &= ~gateOutSeq2;
       }
 }
 void sequence2NextStepForward() {

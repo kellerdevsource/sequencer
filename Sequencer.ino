@@ -23,7 +23,7 @@ volatile bool ctrl;
 volatile bool ctrlFast;
 
 
-uint8_t mainTempoStep = 1;
+uint8_t mainTempoStep = 31;
 
 uint8_t minorScale[12] = {0, 0, 2, 3, 3, 5, 5, 7, 8, 8, 10, 10};
 uint8_t SixSemiScale[12] = {0, 0, 2, 2, 4, 4, 6, 6, 8, 8, 10, 10};
@@ -37,7 +37,7 @@ bool sequence1GateTimer;
 bool sequence1Gate;
 uint16_t sequence1GateTime;
 uint16_t sequence1GateTimeMax = 127; // Read from pot 0-255 : how long the gate is open withing a step
-uint8_t sequence1TempoStepMax = 8;  // Read from pot 32-1: sequence 1 tempo, relative to the main tempo
+uint8_t sequence1TempoStepMax = 1;  // Read from pot 32-1: sequence 1 tempo, relative to the main tempo
 uint8_t sequence1Step;
 uint8_t sequence1LastStep = 15; // Read from pot 0-15 : how much of the sequence is played
 uint8_t sequence1FirstStep = 0;// Read from pot 0-15 : how much of the sequence is played
@@ -47,6 +47,7 @@ uint8_t sequence1Note;
 bool sequence1Play;
 uint8_t repeats;
 uint8_t repeatsMax;
+bool repeatGate;
 
 uint8_t sequence2Type = 0; //0-forward;1-backwords;2-pingpong;3-skip;4-random
 bool pingPongSeq2Dir;
@@ -54,7 +55,7 @@ bool sequence2GateTimer;
 bool sequence2Gate;
 uint16_t sequence2GateTime;
 uint16_t sequence2GateTimeMax = 127; // Read from pot 0-255 : how long the gate is open withing a step
-uint8_t sequence2TempoStepMax = 8;  // Read from pot 32-1: sequence 1 tempo, relative to the main tempo
+uint8_t sequence2TempoStepMax = 1;  // Read from pot 32-1: sequence 1 tempo, relative to the main tempo
 uint8_t sequence2Step;
 uint8_t sequence2LastStep = 15; // Read from pot 0-15 : how much of the sequence is played
 uint8_t sequence2FirstStep = 0;// Read from pot 0-15 : how much of the sequence is played
@@ -109,8 +110,10 @@ void setup() {
   SPI.begin();
   
   Serial.begin(9600);
+  for (uint8_t u = 0; u<15; u++){
+    updateRegistersControls();
+  }
 
-  updateRegistersControls();
 }
 
 ISR(TIMER2_COMPA_vect) {
@@ -157,7 +160,7 @@ void controlFast() {
 }
 void control() {
   updateRegistersControls();
-  sequence1GateTimer = sequence1GateTime < map(sequence1GateTimeMax, 0, 250, 0, (triggerStepMax * sequence1TempoStepMax) / (controlStepMax+1));
+  sequence1GateTimer = sequence1GateTime < map(sequence1GateTimeMax, 0, 255, 0, (triggerStepMax * sequence1TempoStepMax) / (controlStepMax+1));
   if (sequence1GateTimer) {
     sequence1GateTime++;
   } else {
@@ -166,7 +169,7 @@ void control() {
       PORTD &= ~gateOutSeq1;
     }
   }
-  sequence2GateTimer = sequence2GateTime < map(sequence2GateTimeMax, 0, 250, 0, (triggerStepMax * sequence2TempoStepMax) / (controlStepMax+1));
+  sequence2GateTimer = sequence2GateTime < map(sequence2GateTimeMax, 0, 255, 0, (triggerStepMax * sequence2TempoStepMax) / (controlStepMax+1));
   if (sequence2GateTimer) {
     sequence2GateTime++;
   } else {
@@ -184,6 +187,13 @@ void triggerStepp() {
   }
   if (sequence2Play && (!(mainTempoStep % sequence2TempoStepMax))) {
     sequence2Stepp();
+  }
+  if (repeat) {
+    if (!(mainTempoStep % sequence2TempoStepMax)){
+      sequence2GateTime = 0;
+      sequence2Gate = 1;
+      PORTD |= gateOutSeq2;
+    }
   }
   if (mainTempoStep < 31) {
     mainTempoStep++;

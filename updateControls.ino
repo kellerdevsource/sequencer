@@ -4,7 +4,8 @@ bool funcSeq1;
 bool funcSeq2;
 
 void updateRegistersControls() {
-  uint8_t potTempReading;
+  uint16_t potTempReading;
+  bool sequence2PlayRead;
   switch (ctrlRegsOp) {
     case 0:
     PORTC|=ctrlRegsData;
@@ -13,7 +14,7 @@ void updateRegistersControls() {
     PORTC&=~ctrlRegsData;
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    triggerStepMax = map(analogRead(14), 0, 1023, 250, 80); //60?-187.5 BPM
+    triggerStepMax = map(analogRead(14), 0, 1023, 700, 40); //30?-375 BPM
     break;
     case 1:
     PORTC|=ctrlRegsCLK;
@@ -23,6 +24,7 @@ void updateRegistersControls() {
         mainTempoStep = 1;
         sequence1Step = sequence1FirstStep;
         sequence2Step = sequence2FirstStep;
+        repeats = 0;
         funcButton = true;
       }
     } else {
@@ -49,12 +51,12 @@ void updateRegistersControls() {
     case 4:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence1TempoStepMax = 1 << (map(analogRead(14), 0, 1023, 5, 0));//Sequence 1 trigger divider
+    sequence1GateTimeMax = analogRead(14)>>2;
     break;
     case 5:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence1Type = map(analogRead(14), 0, 1023, 0, 5);
+    sequence1Type = map(analogRead(14), 0, 1023, 0, 4);
     //sequence1GateTimeMax = analogRead(14)>>2;
     break;
     case 6:
@@ -70,7 +72,8 @@ void updateRegistersControls() {
     case 7:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    potTempReading = analogRead(14)>>6;
+    potTempReading = analogRead(14);
+    potTempReading = potTempReading>>6;
     if (sequence1LastStep>potTempReading) {
       sequence1FirstStep = potTempReading;
     } else {
@@ -92,16 +95,17 @@ void updateRegistersControls() {
     case 9:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    uint8_t sequence2PlayRead = digitalRead(14);
+    sequence2PlayRead = digitalRead(14);
     if (!sequence2PlayRead){
-      if (sequence2Play) {
-        if (sequence2FirstStep = sequence2LastStep) {
+        if (!sequence2LastStep) {
          repeat = true;
         }
         sequence2Play = false;
-      }
     } else {
-      repeat = false;
+      if (repeat){
+        repeat = false;
+        sequence2TempoStepMax = 1;
+      }
       sequence2Play = true;
     }
     break;
@@ -109,12 +113,16 @@ void updateRegistersControls() {
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
     sequence2TempoStepMax = 1 << (map(analogRead(14), 0, 1023, 5, 0));//Sequence 1 trigger divider
+    /*
+    if (!repeat) {
+      sequence2GateTimeMax = analogRead(14)>>2;
+    }
+    */
     break;
     case 11:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    sequence2Type = map(analogRead(14), 0, 1023, 0, 5);
-    //sequence2GateTimeMax = analogRead(14)>>2;
+    sequence2Type = map(analogRead(14), 0, 1023, 0, 4);
     break;
     case 12:
     PORTC|=ctrlRegsCLK;
@@ -129,11 +137,17 @@ void updateRegistersControls() {
     case 13:
     PORTC|=ctrlRegsCLK;
     PORTC&=~ctrlRegsCLK;
-    potTempReading = analogRead(14)>>6;
-    if (sequence2LastStep>potTempReading) {
-      sequence2FirstStep = potTempReading;
+    potTempReading = analogRead(14);
+    if (repeat){
+      sequence2TempoStepMax = 1 << (map(potTempReading, 0, 1023, 5, 0));//Sequence 1 trigger divider
+      sequence2GateTimeMax = 127;
     } else {
-      sequence2FirstStep = sequence2LastStep;
+      potTempReading = potTempReading>>6;
+      if (sequence2LastStep>potTempReading) {
+        sequence2FirstStep = potTempReading;
+      } else {
+        sequence2FirstStep = sequence2LastStep;
+      }
     }
     break;
     case 14:
